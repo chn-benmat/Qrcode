@@ -9,21 +9,24 @@ image = cv2.imread(image_path)
 gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 # Create a list of QR code names and corresponding data
-qr_names = ['Qr A', 'Qr B', 'Qr C']
-qr_data_list = ['data_for_Qr_A', 'data_for_Qr_B', 'data_for_Qr_C']
+qr_names = ['Qr A', 'Qr B', 'Qr C', 'Qr D', 'Qr E']
+qr_data_list = ['data_for_Qr_A', 'data_for_Qr_B', 'data_for_Qr_C', 'data_for_Qr_D', 'data_for_Qr_E']
 
 # Detect and decode QR codes in the image
 decoded_objects = decode(gray_image)
 
 for obj in decoded_objects:
     qr_data = obj.data.decode('utf-8')  # Extract QR code data
-    qr_name = qr_names[0]  # Default QR name
+    qr_name = None  # Default QR name
     
     # Iterate through each QR code name to check for a match
-    for i in range(len(qr_names)):
+    for i in range(len(qr_data_list)):
         if qr_data == qr_data_list[i]:
             qr_name = qr_names[i]
-            break   
+            break
+    
+    if qr_name is None:
+        qr_name = "Unknown"
     
     # Draw bounding box around the QR code on the image with green color (RGB format)
     qr_points = obj.polygon
