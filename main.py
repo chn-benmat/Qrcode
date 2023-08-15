@@ -1,48 +1,125 @@
-import cv2
-from pyzbar.pyzbar import decode
+import pygame
+import random
 
-# Load image from path
-image_path = 'image/All_Qr8.jpg'
-image = cv2.imread(image_path)
+pygame.init()
 
-# Convert image to grayscale
-gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+# กำหนดขนาดหน้าจอ
+WIDTH, HEIGHT = 640, 480
+win = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Snake Game")
 
-# Create a list of QR code names and corresponding data
-qr_names = ['Qr A', 'Qr B', 'Qr C', 'Qr D', 'Qr E']
-qr_data_list = ['data_for_Qr_A', 'data_for_Qr_B', 'data_for_Qr_C', 'data_for_Qr_D', 'data_for_Qr_E']
+# กำหนดสี
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+ORANGE = (255, 165, 0)
 
-# Detect and decode QR codes in the image
-decoded_objects = decode(gray_image)
+# กำหนดขนาดเซลล์
+CELL_SIZE = 10
 
-for obj in decoded_objects:
-    qr_data = obj.data.decode('utf-8')  # Extract QR code data
-    qr_name = None  # Default QR name
-    
-    # Iterate through each QR code name to check for a match
-    for i in range(len(qr_data_list)):
-        if qr_data == qr_data_list[i]:
-            qr_name = qr_names[i]
-            break
-    
-    if qr_name is None:
-        qr_name = "Unknown"
-    
-    # Draw bounding box around the QR code on the image with green color (RGB format)
-    qr_points = obj.polygon
-    for j in range(4):
-        cv2.line(image, tuple(qr_points[j]), tuple(qr_points[(j+1) % 4]), (0, 255, 0), 3)  # Change color to green
-    
-    # Print the decoded content from the QR code along with the QR name
-    print(f"QR Code content: {qr_data}")
-    print(f"QR Code name: {qr_name}")
-    
-    # Draw the QR code name as text on the image
-    text_x = qr_points[0].x  # X-coordinate of the text
-    text_y = qr_points[3].y + 20  # Y-coordinate of the text (below the QR code)
-    cv2.putText(image, qr_name, (int(text_x), int(text_y)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+# สร้างงู
+snake = [(3, 3)]
+snake_direction = (1, 0)
 
-# Display the image with bounding boxes and QR code names
-cv2.imshow("Detected QR Codes", image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# สร้างอาหาร
+food = (random.randint(0, WIDTH // CELL_SIZE - 1), random.randint(0, HEIGHT // CELL_SIZE - 1))
+
+# กำหนดคะแนน
+score = 0
+
+# สร้างฟอนต์
+font = pygame.font.Font(None, 26)
+
+# สร้างเวลา
+clock = pygame.time.Clock()
+
+# กำหนดความเร็วเริ่มต้น
+speed = 10
+
+# กำหนดเกมส์เริ่มต้น
+game_over = False
+game_stop = False
+start_time = pygame.time.get_ticks() // 1000
+previous_stop_time = 0
+elapsed_time = 0
+
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            exit()
+
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_q]:
+        pygame.quit()
+        exit()
+    elif keys[pygame.K_r]:
+        snake = [(3, 3)]
+        snake_direction = (1, 0)
+        food = (random.randint(0, WIDTH // CELL_SIZE - 1), random.randint(0, HEIGHT // CELL_SIZE - 1))
+        score = 0
+        speed = 10
+        start_time = pygame.time.get_ticks() // 1000
+        game_over = False
+        game_stop = False
+
+    if not game_over and not game_stop:
+        if keys[pygame.K_UP]:
+            snake_direction = (0, -1)
+        elif keys[pygame.K_DOWN]:
+            snake_direction = (0, 1)
+        elif keys[pygame.K_LEFT]:
+            snake_direction = (-1, 0)
+        elif keys[pygame.K_RIGHT]:
+            snake_direction = (1, 0)
+
+        head = (snake[0][0] + snake_direction[0], snake[0][1] + snake_direction[1])
+        snake.insert(0, head)
+
+        if head == food:
+            food = (random.randint(0, WIDTH // CELL_SIZE - 1), random.randint(0, HEIGHT // CELL_SIZE - 1))
+            score += 10
+            speed += 1
+        else:
+            snake.pop()
+
+        if head in snake[1:] or head[0] < 0 or head[0] >= WIDTH // CELL_SIZE or head[1] < 0 or head[1] >= HEIGHT // CELL_SIZE:
+            game_over = True
+            game_stop = True
+
+    win.fill(BLACK)
+    pygame.draw.rect(win, ORANGE, (food[0] * CELL_SIZE, food[1] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+    for segment in snake:
+        pygame.draw.rect(win, WHITE, (segment[0] * CELL_SIZE, segment[1] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+
+    if game_over:
+        if not game_stop:
+            stop_time = pygame.time.get_ticks() // 1000 - start_time
+            elapsed_time += stop_time - previous_stop_time
+            previous_stop_time = stop_time
+        else:
+            previous_stop_time = pygame.time.get_ticks() // 1000 - start_time
+
+        game_over_text = font.render("Game Over", True, WHITE)
+        win.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - game_over_text.get_height() // 2))
+        score_text = font.render(f"Score: {score}", True, WHITE)
+        win.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, HEIGHT // 2 + 10))
+        time_text = font.render(f"Total Time: {elapsed_time} seconds", True, WHITE)
+        win.blit(time_text, (WIDTH // 2 - time_text.get_width() // 2, HEIGHT // 2 + 30))
+        restart_text = font.render("Press R to Restart or Q to Quit", True, WHITE)
+        win.blit(restart_text, (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2 + 50))
+    else:
+        text = font.render(f"Score: {score}", True, WHITE)
+        win.blit(text, (10, 10))
+
+        speed_text = font.render(f"Speed: {speed}", True, WHITE)
+        win.blit(speed_text, (10, 36))
+
+        elapsed_time = pygame.time.get_ticks() // 1000 - start_time
+        time_text = font.render(f"Time: {elapsed_time}", True, WHITE)
+        win.blit(time_text, (WIDTH - time_text.get_width() - 10, 10))
+
+    pygame.display.update()
+
+    clock.tick(speed)
+
+pygame.quit()
